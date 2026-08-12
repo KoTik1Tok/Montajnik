@@ -12,25 +12,28 @@ workflows:
         script: |
           chmod +x gradlew
           ./gradlew shared:linkReleaseFrameworkIosArm64 -Pkotlin.native.cocoapods.platformVersion=14.0
-      - name: Build and archive iOS app (unsigned)
+      - name: Build .app (unsigned)
         script: |
           xcodebuild -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
             -configuration Release \
-            -archivePath "$(pwd)/build/ios.xcarchive" \
+            -derivedDataPath build/derived \
+            -sdk iphoneos \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            archive
-      - name: Export .ipa (unsigned)
+            build
+      - name: Create .ipa from .app
         script: |
-          xcodebuild -exportArchive \
-            -archivePath "$(pwd)/build/ios.xcarchive" \
-            -exportPath "$(pwd)/build/ios.ipa" \
-            -exportOptionsPlist iosApp/ExportOptions.plist \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+          APP_PATH="build/derived/Build/Products/Release-iphoneos/iosApp.app"
+          IPA_PATH="build/ios.ipa"
+          mkdir -p build/Payload
+          cp -r "$APP_PATH" build/Payload/
+          cd build
+          zip -r ios.ipa Payload/
+      - name: Upload .ipa as artifact
+        script: |
+          # Артефакты собираются автоматически из папки build
     artifacts:
       - build/ios.ipa
     publishing:
