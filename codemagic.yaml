@@ -1,34 +1,39 @@
-@"
 workflows:
   ios-release:
     name: iOS Release
     environment:
       vars:
-        XCODE_WORKSPACE: "iosApp/iosApp.xcworkspace"
+        XCODE_PROJECT: "iosApp/iosApp.xcodeproj"
         XCODE_SCHEME: "iosApp"
         BUNDLE_ID: "com.example.myapp"
       node: latest
     scripts:
       - name: Build iOS framework (KMP)
         script: |
+          chmod +x gradlew
           ./gradlew shared:linkReleaseFrameworkIosArm64 -Pkotlin.native.cocoapods.platformVersion=14.0
-      - name: Build and archive iOS app
+      - name: Build and archive iOS app (unsigned)
         script: |
-          xcodebuild -workspace "$XCODE_WORKSPACE" \
+          xcodebuild -project "$XCODE_PROJECT" \
             -scheme "$XCODE_SCHEME" \
             -configuration Release \
             -archivePath "$(pwd)/build/ios.xcarchive" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
             archive
-      - name: Export .ipa
+      - name: Export .ipa (unsigned)
         script: |
           xcodebuild -exportArchive \
             -archivePath "$(pwd)/build/ios.xcarchive" \
             -exportPath "$(pwd)/build/ios.ipa" \
-            -exportOptionsPlist iosApp/ExportOptions.plist
+            -exportOptionsPlist iosApp/ExportOptions.plist \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
     artifacts:
       - build/ios.ipa
     publishing:
       email:
         recipients:
           - your_email@example.com
-"@ | Out-File -FilePath codemagic.yaml -Encoding utf8
